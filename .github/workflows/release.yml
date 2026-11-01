@@ -1,15 +1,15 @@
-# Publikacja biblioteki "adaraz" na PyPI przez Trusted Publishing (OIDC):
-# bez hasla i bez tokenu w repozytorium. Uruchamia sie po wypchnieciu tagu
-# vX.Y.Z zgodnego z wersja w lib/pyproject.toml.
+# Publishes the "adaraz" library to PyPI with Trusted Publishing (OIDC):
+# no password or API token is stored in the repository. Runs when a tag
+# vX.Y.Z matching the version in lib/pyproject.toml is pushed.
 #
-# Na PyPI (konto wlasciciela projektu): Publishing > Add a new pending publisher
+# PyPI (project owner account): Publishing > Add a new pending publisher
 #   PyPI project name: adaraz
 #   Owner:             ADARAZ-P-S-A
 #   Repository name:   ADARAZ-HA
 #   Workflow name:     release.yml
 #   Environment name:  pypi
-# Na GitHub: Settings > Environments > New environment "pypi" (zalecane: wymagany
-# recenzent, zeby kazda publikacja wymagala klikniecia).
+# GitHub: Settings > Environments > New environment "pypi" (recommended: a
+# required reviewer, so every release needs an explicit approval).
 name: release
 
 on:
@@ -27,11 +27,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Tag zgodny z wersja pakietu
+      - name: Tag matches package version
         run: |
           v=$(python -c "import tomllib;print(tomllib.load(open('lib/pyproject.toml','rb'))['project']['version'])")
           test "v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != v$v"; exit 1; }
-      - name: Testy
+      - name: Tests
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e "./lib[test]"
