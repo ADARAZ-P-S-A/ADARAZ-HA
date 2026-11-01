@@ -32,10 +32,9 @@ Repository layout:
 Copy `custom_components/adaraz` into the `custom_components` folder of your
 Home Assistant configuration and restart Home Assistant.
 
-The integration needs the `adaraz` Python package (`adaraz==0.1.0`), which Home
-Assistant installs from PyPI. Until it is published there (see
-[Before release](#before-release)), install it into Home Assistant's Python
-environment from `lib/` (`pip install ./lib`).
+The integration needs the `adaraz` Python package
+([PyPI](https://pypi.org/project/adaraz/)), which Home Assistant installs
+automatically from the version pinned in `manifest.json`.
 
 Home Assistant 2025.1 or newer is required.
 
@@ -146,12 +145,12 @@ pairing in the reader's admin panel (or pair it again).
 
 ## Before release
 
-- **Publish the library first.** The manifest requires `adaraz==0.1.0`, which
-  is not on PyPI yet, so a normal install (HACS or core) fails with a
-  requirements error until it is. Publish `lib/` to PyPI under the name
-  `adaraz`, from a public release workflow (core's dependency-transparency
-  rule), before the integration is released. Doing it soon also claims the
-  name, so nobody else can register it.
+- **Library releases.** `lib/` is published to PyPI as `adaraz` by
+  `.github/workflows/release.yml` (Trusted Publishing) when a tag `vX.Y.Z`
+  matching `version` in `lib/pyproject.toml` is pushed. Bump the version in
+  `lib/pyproject.toml`, `lib/src/adaraz/__init__.py` and the requirement in
+  `custom_components/adaraz/manifest.json` together; PyPI never accepts the
+  same version twice.
 - **Custom build vs. core.** The manifest's `version` and `issue_tracker` keys
   are for the custom build (HACS) and are removed for a core submission. The
   documentation link points to this README until there is a page on

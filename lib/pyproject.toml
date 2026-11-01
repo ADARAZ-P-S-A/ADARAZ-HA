@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "adaraz"
-version = "0.1.0"
+version = "0.1.1"
 description = "ADARAZ Link: secure, Noise based connection between ADARAZ devices (RAZ-RCP-1) and servers"
 readme = "README.md"
 license = "MIT"
@@ -37,8 +37,8 @@ test = [
 
 [project.urls]
 Homepage = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA"
-Documentation = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/tree/main/lib#readme"
-Protocol = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/blob/main/docs/protocol.md"
+Documentation = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/tree/master/lib#readme"
+Protocol = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/blob/master/docs/protocol.md"
 Issues = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/issues"
 
 [tool.hatch.build.targets.wheel]

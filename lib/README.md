@@ -13,7 +13,7 @@ Assistant integration and can be used to build your own server.
   acknowledges only after it stored the records.
 
 The wire protocol is specified in
-[`docs/protocol.md`](https://github.com/ADARAZ-P-S-A/ADARAZ-HA/blob/main/docs/protocol.md).
+[`docs/protocol.md`](https://github.com/ADARAZ-P-S-A/ADARAZ-HA/blob/master/docs/protocol.md).
 
 ```
 pip install adaraz            # core (only depends on cryptography)
@@ -61,7 +61,7 @@ asyncio.run(main())
 ```
 
 A complete standalone server with file storage and an admin HTTP API is in
-[`examples/server.py`](https://github.com/ADARAZ-P-S-A/ADARAZ-HA/blob/main/examples/server.py).
+[`examples/server.py`](https://github.com/ADARAZ-P-S-A/ADARAZ-HA/blob/master/examples/server.py).
 
 ## Public API
 

@@ -152,6 +152,9 @@ async def harness(
     """Return the device harness; Home Assistant has a URL and the domain is set up."""
     await async_process_ha_core_config(hass, {"internal_url": INTERNAL_URL})
     assert await async_setup_component(hass, DOMAIN, {})
+    # Components that register HTTP views must be set up before the first test
+    # client starts the app; newer aiohttp freezes the router at that point.
+    assert await async_setup_component(hass, "diagnostics", {})
     await hass.async_block_till_done()
     harness = Harness(hass, hass_client_no_auth)
     yield harness

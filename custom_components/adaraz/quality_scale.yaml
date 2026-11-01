@@ -16,10 +16,10 @@ rules:
   config-flow-test-coverage: done
   config-flow: done
   dependency-transparency:
-    status: todo
+    status: done
     comment: >-
-      The adaraz library (lib/ of this repository, MIT) must first be published
-      to PyPI by a public release workflow; see "Before release" in README.md.
+      The adaraz library (lib/ of this repository, MIT) is published to PyPI
+      by the public release workflow .github/workflows/release.yml.
   docs-actions:
     status: exempt
     comment: The integration does not register actions.
