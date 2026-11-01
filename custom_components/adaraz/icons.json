@@ -1,0 +1,28 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "reader": {
+        "default": "mdi:card-account-details"
+      }
+    },
+    "button": {
+      "open": {
+        "default": "mdi:door-open"
+      }
+    },
+    "event": {
+      "punch": {
+        "default": "mdi:badge-account"
+      }
+    },
+    "switch": {
+      "relay": {
+        "default": "mdi:electric-switch",
+        "state": {
+          "off": "mdi:electric-switch",
+          "on": "mdi:electric-switch-closed"
+        }
+      }
+    }
+  }
+}

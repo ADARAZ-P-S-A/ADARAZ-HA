@@ -1,0 +1,26 @@
+# Test and lint settings for the Home Assistant integration in custom_components/.
+# The adaraz library has its own project in lib/.
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+extend-exclude = ["lib", "examples"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "ASYNC", "D"]
+ignore = ["D203", "D213", "ASYNC109", "RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D", "ASYNC110"]
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+known-first-party = ["homeassistant"]
+known-local-folder = ["custom_components"]
+combine-as-imports = true

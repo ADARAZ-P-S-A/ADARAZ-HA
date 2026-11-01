@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "adaraz"
+version = "0.1.0"
+description = "ADARAZ Link: secure, Noise based connection between ADARAZ devices (RAZ-RCP-1) and servers"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.12"
+authors = [{ name = "ADARAZ" }]
+keywords = ["adaraz", "raz-rcp-1", "noise", "time clock", "home assistant"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: AsyncIO",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Home Automation",
+    "Topic :: Security :: Cryptography",
+    "Typing :: Typed",
+]
+dependencies = ["cryptography>=42"]
+
+[project.optional-dependencies]
+aiohttp = ["aiohttp>=3.10"]
+test = [
+    "aiohttp>=3.10",
+    "noiseprotocol==0.3.1",
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+]
+
+[project.urls]
+Homepage = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA"
+Documentation = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/tree/main/lib#readme"
+Protocol = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/blob/main/docs/protocol.md"
+Issues = "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/adaraz"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/adaraz", "tests", "README.md", "LICENSE"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+files = ["src/adaraz"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "ASYNC"]
+# Public coroutines take an explicit timeout argument on purpose.
+ignore = ["ASYNC109"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ASYNC110"]

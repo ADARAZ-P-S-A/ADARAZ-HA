@@ -1,0 +1,14 @@
+{
+  "domain": "adaraz",
+  "name": "ADARAZ",
+  "codeowners": ["@razikus"],
+  "config_flow": true,
+  "dependencies": ["http"],
+  "documentation": "https://github.com/ADARAZ-P-S-A/ADARAZ-HA#readme",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/ADARAZ-P-S-A/ADARAZ-HA/issues",
+  "loggers": ["adaraz"],
+  "requirements": ["adaraz==0.1.0"],
+  "version": "0.1.0"
+}

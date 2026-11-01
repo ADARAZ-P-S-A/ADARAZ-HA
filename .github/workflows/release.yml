@@ -1,0 +1,60 @@
+# Publikacja biblioteki "adaraz" na PyPI przez Trusted Publishing (OIDC):
+# bez hasla i bez tokenu w repozytorium. Uruchamia sie po wypchnieciu tagu
+# vX.Y.Z zgodnego z wersja w lib/pyproject.toml.
+#
+# Na PyPI (konto wlasciciela projektu): Publishing > Add a new pending publisher
+#   PyPI project name: adaraz
+#   Owner:             ADARAZ-P-S-A
+#   Repository name:   ADARAZ-HA
+#   Workflow name:     release.yml
+#   Environment name:  pypi
+# Na GitHub: Settings > Environments > New environment "pypi" (zalecane: wymagany
+# recenzent, zeby kazda publikacja wymagala klikniecia).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Tag zgodny z wersja pakietu
+        run: |
+          v=$(python -c "import tomllib;print(tomllib.load(open('lib/pyproject.toml','rb'))['project']['version'])")
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} != v$v"; exit 1; }
+      - name: Testy
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "./lib[test]"
+          cd lib && python -m pytest -q
+      - name: Build
+        run: |
+          python -m pip install build twine
+          python -m build lib --outdir dist
+          twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

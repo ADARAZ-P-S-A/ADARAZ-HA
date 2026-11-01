@@ -1,0 +1,86 @@
+{
+  "config": {
+    "step": {
+      "pair": {
+        "title": "Parowanie czytnika"
+      },
+      "retry": {
+        "title": "Parowanie nie powiodło się",
+        "description": "Wybierz **Zatwierdź**, aby otrzymać nowy kod parowania i spróbować ponownie."
+      }
+    },
+    "progress": {
+      "pair": "Otwórz lokalny panel administracyjny czytnika i przejdź do ustawień ADARAZ Link (Home Assistant). Wpisz:\n\n- Adres serwera: `{url}`\n- Kod parowania: **{code}**\n\nKod ma 12 znaków, w postaci XXXX-XXXX-XXXX. Wielkość liter i myślniki nie mają znaczenia. Kod jest jednorazowy i ważny przez {minutes} minut. Ta strona przejdzie dalej sama, gdy czytnik się sparuje."
+    },
+    "error": {
+      "pairing_expired": "Kod parowania wygasł, zanim czytnik się sparował.",
+      "pairing_failed": "Czytnik zbyt wiele razy wysłał błędny kod parowania. Sprawdź kod i spróbuj ponownie.",
+      "unknown": "Nieoczekiwany błąd"
+    },
+    "abort": {
+      "already_configured": "Urządzenie jest już skonfigurowane",
+      "no_url": "Home Assistant nie ma adresu, z którym czytnik mógłby się połączyć. Ustaw adres w sieci lokalnej w Ustawienia > System > Sieć."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connection": {
+        "name": "Połączenie"
+      },
+      "reader": {
+        "name": "Czytnik kart"
+      }
+    },
+    "button": {
+      "open": {
+        "name": "Otwórz"
+      }
+    },
+    "event": {
+      "punch": {
+        "name": "Odbicie",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "punch": "Odbicie karty"
+            }
+          },
+          "uid": {
+            "name": "UID karty"
+          },
+          "ts": {
+            "name": "Czas odbicia"
+          },
+          "late": {
+            "name": "Spóźnione"
+          }
+        }
+      }
+    },
+    "switch": {
+      "relay": {
+        "name": "Przekaźnik"
+      }
+    }
+  },
+  "exceptions": {
+    "not_connected": {
+      "message": "Czytnik nie jest połączony z Home Assistant"
+    },
+    "relay_timeout": {
+      "message": "Czytnik nie odpowiedział na czas na polecenie przekaźnika"
+    },
+    "relay_not_allowed": {
+      "message": "Zdalne sterowanie przekaźnikiem jest wyłączone w czytniku. Włącz je w lokalnym panelu administracyjnym czytnika"
+    },
+    "relay_invalid": {
+      "message": "Czytnik odrzucił polecenie przekaźnika jako nieprawidłowe"
+    },
+    "relay_busy": {
+      "message": "Przekaźnik jest zajęty. Spróbuj ponownie za chwilę"
+    },
+    "relay_failed": {
+      "message": "Polecenie przekaźnika nie powiodło się: {error}"
+    }
+  }
+}

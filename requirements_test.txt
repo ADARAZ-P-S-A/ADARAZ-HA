@@ -1,0 +1,5 @@
+# Test dependencies of the Home Assistant integration (Python 3.13).
+# pytest-homeassistant-custom-component 0.13.316 pins homeassistant 2026.2.3.
+pytest-homeassistant-custom-component==0.13.316
+mypy==2.4.1
+ruff==0.17.3

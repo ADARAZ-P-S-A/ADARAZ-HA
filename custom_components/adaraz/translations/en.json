@@ -1,0 +1,86 @@
+{
+  "config": {
+    "step": {
+      "pair": {
+        "title": "Pair the reader"
+      },
+      "retry": {
+        "title": "Pairing did not complete",
+        "description": "Select **Submit** to get a new pairing code and try again."
+      }
+    },
+    "progress": {
+      "pair": "Open the local admin panel of the reader and go to the ADARAZ Link (Home Assistant) settings. Enter:\n\n- Server URL: `{url}`\n- Pairing code: **{code}**\n\nThe code has 12 characters, shown as XXXX-XXXX-XXXX. Letter case and the dashes do not matter. It can be used once and is valid for {minutes} minutes. This page continues by itself when the reader has paired."
+    },
+    "error": {
+      "pairing_expired": "The pairing code expired before the reader paired.",
+      "pairing_failed": "The reader sent a wrong pairing code too many times. Check the code and try again.",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured",
+      "no_url": "Home Assistant has no URL the reader can connect to. Set the local network URL in Settings > System > Network."
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connection": {
+        "name": "Connection"
+      },
+      "reader": {
+        "name": "Card reader"
+      }
+    },
+    "button": {
+      "open": {
+        "name": "Open"
+      }
+    },
+    "event": {
+      "punch": {
+        "name": "Punch",
+        "state_attributes": {
+          "event_type": {
+            "state": {
+              "punch": "Card punch"
+            }
+          },
+          "uid": {
+            "name": "Card UID"
+          },
+          "ts": {
+            "name": "Punch time"
+          },
+          "late": {
+            "name": "Late"
+          }
+        }
+      }
+    },
+    "switch": {
+      "relay": {
+        "name": "Relay"
+      }
+    }
+  },
+  "exceptions": {
+    "not_connected": {
+      "message": "The reader is not connected to Home Assistant"
+    },
+    "relay_timeout": {
+      "message": "The reader did not answer the relay command in time"
+    },
+    "relay_not_allowed": {
+      "message": "Remote relay control is disabled on the reader. Enable it in the reader's local admin panel"
+    },
+    "relay_invalid": {
+      "message": "The reader rejected the relay command as invalid"
+    },
+    "relay_busy": {
+      "message": "The relay is busy. Try again in a moment"
+    },
+    "relay_failed": {
+      "message": "The relay command failed: {error}"
+    }
+  }
+}
