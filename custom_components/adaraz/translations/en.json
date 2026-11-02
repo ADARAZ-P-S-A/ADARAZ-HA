@@ -2,19 +2,19 @@
   "config": {
     "step": {
       "pair": {
-        "title": "Pair the reader"
+        "title": "Connect the reader"
       },
       "retry": {
-        "title": "Pairing did not complete",
-        "description": "Select **Submit** to get a new pairing code and try again."
+        "title": "The reader did not connect",
+        "description": "Select **Submit** to get a new code and try again."
       }
     },
     "progress": {
-      "pair": "Open the local admin panel of the reader and go to the ADARAZ Link (Home Assistant) settings. Enter:\n\n- Server URL: `{url}`\n- Pairing code: **{code}**\n\nThe code has 12 characters, shown as XXXX-XXXX-XXXX. Letter case and the dashes do not matter. It can be used once and is valid for {minutes} minutes. This page continues by itself when the reader has paired."
+      "pair": "Open the reader's local admin panel: **Settings > Integrations > Home Assistant and other servers**. Enter:\n\n- Server address: `{url}`\n- Code: **{code}**\n\nLetter case and the dashes do not matter. The code can be used once and is valid for {minutes} minutes. This page continues by itself when the reader has connected."
     },
     "error": {
-      "pairing_expired": "The pairing code expired before the reader paired.",
-      "pairing_failed": "The reader sent a wrong pairing code too many times. Check the code and try again.",
+      "pairing_expired": "The code expired before the reader connected.",
+      "pairing_failed": "The reader sent a wrong code too many times. Check the code and try again.",
       "unknown": "Unexpected error"
     },
     "abort": {

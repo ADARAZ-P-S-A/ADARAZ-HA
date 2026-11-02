@@ -49,8 +49,8 @@ Home Assistant 2025.1 or newer is required.
 3. Home Assistant shows the server URL and a one-time pairing code of 12
    characters such as `7KQ2-MX9T-DA4P` (shown as `XXXX-XXXX-XXXX`). The code is
    valid for 10 minutes, for one device.
-4. Open the reader's local admin panel, go to the ADARAZ Link (Home Assistant)
-   settings and enter the URL and the code. Letter case, the dashes and the
+4. Open the reader's local admin panel, go to **Settings > Integrations > Home
+   Assistant and other servers** and enter the URL and the code. Letter case, the dashes and the
    letters O / I / L (read as 0 / 1 / 1) do not matter.
 5. The reader pairs and connects. Home Assistant continues by itself and adds
    the device. If you close the dialog before that, the reader is unpaired
@@ -78,6 +78,13 @@ marked as late.
 reader. That setting is only available in the reader's local admin panel, for
 an administrator. When it changes, Home Assistant adds or removes the two
 entities automatically. They are unavailable while the reader is disconnected.
+
+By default an accepted card also opens the relay on the reader itself, without
+Home Assistant. To let only Home Assistant decide, choose a relay mode with
+**remote management** on the reader (firmware 108 or newer): a card then only
+records the punch, and the relay moves only on **Open** / **Relay** (and the
+panel's test buttons). Without Home Assistant or the network, nobody gets in
+by card in that mode.
 
 ### Automations with punches
 
@@ -181,15 +188,15 @@ protokołem Noise, więc zwykłe `http://` w sieci lokalnej jest bezpieczne.
 **Instalacja:** HACS (Custom repositories, typ Integration) albo skopiowanie
 `custom_components/adaraz` do konfiguracji Home Assistant i restart.
 
-**Parowanie:**
+**Połączenie czytnika:**
 
 1. Ustaw adres Home Assistant w sieci lokalnej: **Ustawienia > System > Sieć**.
 2. **Ustawienia > Urządzenia oraz usługi > Dodaj integrację > ADARAZ**.
-3. Home Assistant pokaże adres serwera i jednorazowy, 12-znakowy kod parowania
+3. Home Assistant pokaże adres serwera i jednorazowy, 12-znakowy kod
    w postaci `XXXX-XXXX-XXXX` (ważny 10 minut).
-4. W lokalnym panelu administracyjnym czytnika, w ustawieniach ADARAZ Link
-   (Home Assistant), wpisz adres i kod.
-5. Czytnik się sparuje i połączy, a Home Assistant sam doda urządzenie.
+4. W lokalnym panelu czytnika: **Ustawienia > Integracje > Home Assistant
+   i inne serwery** wpisz adres i kod.
+5. Czytnik się połączy, a Home Assistant sam doda urządzenie.
 
 **Encje:** zdarzenie *Odbicie* (atrybuty `uid`, `ts`, `late`), czujniki
 *Połączenie* i *Czytnik kart* (problem), a gdy w czytniku włączono zdalne
@@ -199,8 +206,13 @@ Automatyzacje reagują na zmianę stanu encji *Odbicie* i sprawdzają atrybuty
 fakcie (czytnik był offline), mają `late: true` i nie powinny uruchamiać działań
 w czasie rzeczywistym, np. otwierania drzwi.
 
-**Usunięcie:** usunięcie wpisu integracji każe połączonemu czytnikowi skasować
-parowanie.
+**Tylko Home Assistant steruje przekaźnikiem:** w czytniku (firmware 108 lub
+nowszy) wybierz tryb przekaźnika z *zarządzaniem zdalnym*. Karta wtedy tylko
+zapisuje odbicie, a przekaźnik reaguje na *Otwórz* / *Przekaźnik* (i przyciski
+testu w panelu). Bez Home Assistant albo sieci nikt nie wejdzie na kartę.
+
+**Usunięcie:** usunięcie wpisu integracji odłącza połączony czytnik od Home
+Assistant.
 
 ## License
 

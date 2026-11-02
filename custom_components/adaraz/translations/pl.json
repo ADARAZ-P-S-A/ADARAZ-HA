@@ -2,19 +2,19 @@
   "config": {
     "step": {
       "pair": {
-        "title": "Parowanie czytnika"
+        "title": "Połączenie czytnika"
       },
       "retry": {
-        "title": "Parowanie nie powiodło się",
-        "description": "Wybierz **Zatwierdź**, aby otrzymać nowy kod parowania i spróbować ponownie."
+        "title": "Czytnik się nie połączył",
+        "description": "Wybierz **Zatwierdź**, aby otrzymać nowy kod i spróbować ponownie."
       }
     },
     "progress": {
-      "pair": "Otwórz lokalny panel administracyjny czytnika i przejdź do ustawień ADARAZ Link (Home Assistant). Wpisz:\n\n- Adres serwera: `{url}`\n- Kod parowania: **{code}**\n\nKod ma 12 znaków, w postaci XXXX-XXXX-XXXX. Wielkość liter i myślniki nie mają znaczenia. Kod jest jednorazowy i ważny przez {minutes} minut. Ta strona przejdzie dalej sama, gdy czytnik się sparuje."
+      "pair": "Otwórz lokalny panel czytnika: **Ustawienia > Integracje > Home Assistant i inne serwery**. Wpisz:\n\n- Adres serwera: `{url}`\n- Kod: **{code}**\n\nWielkość liter i myślniki nie mają znaczenia. Kod jest jednorazowy i ważny przez {minutes} minut. Ta strona przejdzie dalej sama, gdy czytnik się połączy."
     },
     "error": {
-      "pairing_expired": "Kod parowania wygasł, zanim czytnik się sparował.",
-      "pairing_failed": "Czytnik zbyt wiele razy wysłał błędny kod parowania. Sprawdź kod i spróbuj ponownie.",
+      "pairing_expired": "Kod wygasł, zanim czytnik się połączył.",
+      "pairing_failed": "Czytnik zbyt wiele razy wysłał błędny kod. Sprawdź kod i spróbuj ponownie.",
       "unknown": "Nieoczekiwany błąd"
     },
     "abort": {
