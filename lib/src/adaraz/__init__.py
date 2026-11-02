@@ -46,7 +46,7 @@ from .storage import (
 )
 from .transport import MemoryTransport, Transport, build_ws_url, memory_pipe
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     "PROTOCOL_VERSION",
