@@ -162,8 +162,15 @@ pairing in the reader's admin panel (or pair it again).
   are for the custom build (HACS) and are removed for a core submission. The
   documentation link points to this README until there is a page on
   home-assistant.io. The manifest declares no quality scale until every Bronze
-  rule in `quality_scale.yaml` is done (brands: the images in `brands/adaraz`
-  go to home-assistant/brands with the core PR).
+  rule in `quality_scale.yaml` is done.
+- **Brand images.** The icon and logo are in `custom_components/adaraz/brand`
+  (Home Assistant 2026.3 or newer shows them; the Marketplace takes them from
+  the latest GitHub release). They follow the ADARAZ brand book: ink `#16151D`
+  with the violet `#6A4CF6` wave, and white with the lavender `#C7BAFF` wave for
+  the `dark_` versions. The logo puts the wordmark next to the sign, centred
+  on its height, with the brand book's proportions (sign 1.89 X, gap 0.56 X,
+  X = letter height). For a core submission they move to
+  home-assistant/brands and the folder is removed.
 
 ## Development
 

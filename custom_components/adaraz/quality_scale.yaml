@@ -10,8 +10,8 @@ rules:
   brands:
     status: todo
     comment: >-
-      The images are ready in brands/adaraz of this repository; they are
-      submitted to home-assistant/brands together with the core PR.
+      The custom build ships its images in custom_components/adaraz/brand;
+      for the core PR they are submitted to home-assistant/brands instead.
   common-modules: done
   config-flow-test-coverage: done
   config-flow: done

@@ -61,5 +61,3 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # Brand images are added to home-assistant/brands separately.
-          ignore: brands
