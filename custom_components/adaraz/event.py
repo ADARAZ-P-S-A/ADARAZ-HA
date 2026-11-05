@@ -10,7 +10,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import AdarazConfigEntry
-from .const import ATTR_CARD, ATTR_LATE, ATTR_TS, ATTR_UID
+from .const import ATTR_CARD, ATTR_CARD_NAME, ATTR_LATE, ATTR_TS, ATTR_UID
 from .entity import AdarazEntity
 
 PARALLEL_UPDATES = 0
@@ -30,8 +30,9 @@ async def async_setup_entry(
 class AdarazPunchEvent(AdarazEntity, EventEntity):
     """Fires for every new punch.
 
-    ``card`` is the name an admin gave the card in the options, or else its card
-    ID (``card_`` and 8 hex digits, see ``AdarazLink.card_id``). The raw card UID
+    ``card`` is the card ID (``card_`` and 8 hex digits, see ``AdarazLink.card_id``),
+    which never changes; ``card_name`` is the name of the card's tag in Settings >
+    Tags, or None. Live punches are also tag scans (``AdarazDevice``). The raw UID
     is a credential (many readers accept a cloned UID), so it is in the
     attributes only when the ``expose_uid`` option is on, it is never written to
     the recorder, and a restored state keeps it only while the option is on.
@@ -70,8 +71,10 @@ class AdarazPunchEvent(AdarazEntity, EventEntity):
 
     @callback
     def _handle_punch(self, punch: PunchRecord) -> None:
+        card_id = self._device.link.card_id(punch.uid)
         attributes: dict[str, Any] = {
-            ATTR_CARD: self._device.card_name(punch.uid),
+            ATTR_CARD: card_id,
+            ATTR_CARD_NAME: self._device.card_name(card_id),
             ATTR_TS: punch.ts,
             ATTR_LATE: punch.late,
         }

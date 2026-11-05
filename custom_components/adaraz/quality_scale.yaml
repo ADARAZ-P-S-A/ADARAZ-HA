@@ -60,7 +60,7 @@ rules:
   docs-configuration-parameters:
     status: todo
     comment: >-
-      Written in README.md (card names, card UID option); done once the
+      Written in README.md (card UID option); done once the
       integration's page on home-assistant.io exists.
   docs-installation-parameters:
     status: todo

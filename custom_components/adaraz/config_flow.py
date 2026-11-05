@@ -1,15 +1,15 @@
-"""Config flow for ADARAZ: pair a device with a one-time code.
+"""Config flow for ADARAZ: choose the device model, then connect it.
 
-The options flow names known cards and turns the raw card UID in the punch
-attributes on or off.
+RAZ-RCP-1 connects over ADARAZ Link: Home Assistant shows a one-time code that a
+person enters in the device's admin panel. The options flow turns the raw card
+UID in the punch attributes on or off.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import re
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import voluptuous as vol
 
@@ -28,20 +28,10 @@ from homeassistant.config_entries import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.network import NoURLAvailableError, get_url
-from homeassistant.helpers.selector import (
-    BooleanSelector,
-    SelectOptionDict,
-    SelectSelector,
-    SelectSelectorConfig,
-    SelectSelectorMode,
-    TextSelector,
-)
-from homeassistant.util import dt as dt_util
+from homeassistant.helpers.selector import BooleanSelector
 
 from .const import (
-    CARD_ID_PREFIX,
     CONF_CAPS,
-    CONF_CARDS,
     CONF_EXPOSE_UID,
     CONF_MODEL,
     CONF_NAME,
@@ -51,9 +41,6 @@ from .const import (
 )
 from .link import async_get_link
 
-if TYPE_CHECKING:
-    from .link import AdarazDevice
-
 _LOGGER = logging.getLogger(__name__)
 
 #: Lifetime of a pairing code in seconds (protocol maximum: 10 minutes).
@@ -61,25 +48,17 @@ PAIRING_TIMEOUT = 600.0
 
 RESULT_PAIRED = "paired"
 
-CONF_UID = "uid"
-#: A card UID as the protocol sends it: 4 to 7 bytes of uppercase hex.
-UID_RE = re.compile(r"(?:[0-9A-F]{2}){4,7}")
-#: Names in the form of card IDs are reserved: one could equal another card's ID.
-CARD_ID_RE = re.compile(rf"{CARD_ID_PREFIX}[0-9a-f]{{8}}", re.IGNORECASE)
-
-
-def normalize_uid(value: str) -> str | None:
-    """Return the UID in protocol form (``04:a1:b2:c3`` -> ``04A1B2C3``) or None."""
-    uid = re.sub(r"[\s:-]", "", value).upper()
-    return uid if UID_RE.fullmatch(uid) else None
+#: Device models offered in the first step (menu option = step of that model).
+#: Each model's step goes on to the way it connects; all so far use ADARAZ Link.
+MODELS = ["raz_rcp_1"]
 
 
 class AdarazConfigFlow(ConfigFlow, domain=DOMAIN):
-    """Pair an ADARAZ device.
+    """Add an ADARAZ device: choose its model, then pair it.
 
-    Home Assistant opens a pairing window and shows a one-time code and its URL.
-    A person enters both in the device's local admin panel; the device then
-    connects and proves that it knows the code (Noise XXpsk3).
+    ADARAZ Link pairing: Home Assistant opens a pairing window and shows a one-time
+    code and its URL. A person enters both in the device's local admin panel; the
+    device then connects and proves that it knows the code (Noise XXpsk3).
     """
 
     VERSION = 1
@@ -105,7 +84,19 @@ class AdarazConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Open a pairing window and show its code."""
+        """Choose the device model."""
+        return self.async_show_menu(step_id="user", menu_options=MODELS)
+
+    async def async_step_raz_rcp_1(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """RAZ-RCP-1 card reader / time clock: it connects over ADARAZ Link."""
+        return await self.async_step_link()
+
+    async def async_step_link(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Open an ADARAZ Link pairing window and show its code."""
         try:
             self._url = get_url(self.hass, allow_cloud=False, prefer_external=False)
         except NoURLAvailableError:
@@ -177,7 +168,7 @@ class AdarazConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Show why pairing did not complete; submit to get a new code."""
         if user_input is not None:
-            return await self.async_step_user()
+            return await self.async_step_link()
         return self.async_show_form(
             step_id="retry", data_schema=vol.Schema({}), errors={"base": self._error}
         )
@@ -233,121 +224,22 @@ class AdarazConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class AdarazOptionsFlow(OptionsFlow):
-    """Name known cards; turn the raw card UID in punch attributes on or off.
+    """Turn the raw card UID in the punch attributes on or off.
 
-    Only admins can open an options flow, so it may show card UIDs.
+    Cards are named in Settings > Tags (a card's tag ID is its card ID).
     """
-
-    @property
-    def _cards(self) -> dict[str, str]:
-        cards: dict[str, str] = self.config_entry.options.get(CONF_CARDS, {})
-        return cards
-
-    @property
-    def _device(self) -> AdarazDevice | None:
-        """Runtime data of the entry; None if it was never set up."""
-        device: AdarazDevice | None = getattr(self.config_entry, "runtime_data", None)
-        return device
-
-    def _save(self, **changes: Any) -> ConfigFlowResult:
-        return self.async_create_entry(data={**self.config_entry.options, **changes})
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Choose what to change."""
-        menu = ["add_card"]
-        if self._cards:
-            menu.append("remove_card")
-        menu.append("uid")
-        return self.async_show_menu(step_id="init", menu_options=menu)
-
-    async def async_step_add_card(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Give a card a name: one that punched recently, or a UID typed in."""
-        errors: dict[str, str] = {}
-        device = self._device
+        """Show the option."""
         if user_input is not None:
-            uid = normalize_uid(user_input[CONF_UID])
-            name = user_input[CONF_NAME].strip()
-            if uid is None:
-                errors[CONF_UID] = "invalid_uid"
-            elif not name or CARD_ID_RE.fullmatch(name):
-                errors[CONF_NAME] = "invalid_name"
-            else:
-                if device is not None:
-                    device.recent_unnamed.pop(uid, None)
-                cards = {**self._cards, uid: name}
-                return self._save(**{CONF_CARDS: dict(sorted(cards.items()))})
-
-        uid_selector: SelectSelector | TextSelector = TextSelector()
-        if device is not None and (recent := device.recent_unnamed):
-            uid_selector = SelectSelector(
-                SelectSelectorConfig(
-                    options=[
-                        SelectOptionDict(
-                            value=uid,
-                            label=(
-                                f"{device.link.card_id(uid)} ({uid}, {_format_ts(ts)})"
-                            ),
-                        )
-                        for uid, ts in reversed(recent.items())
-                    ],
-                    custom_value=True,
-                    mode=SelectSelectorMode.DROPDOWN,
-                )
+            # Only this option is kept (0.1.4 also stored card names here).
+            return self.async_create_entry(
+                data={CONF_EXPOSE_UID: user_input[CONF_EXPOSE_UID]}
             )
         return self.async_show_form(
-            step_id="add_card",
-            data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(
-                    {
-                        vol.Required(CONF_UID): uid_selector,
-                        vol.Required(CONF_NAME): TextSelector(),
-                    }
-                ),
-                user_input,
-            ),
-            errors=errors,
-        )
-
-    async def async_step_remove_card(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Forget the names of cards; their punches show the card ID again."""
-        if user_input is not None:
-            remove = set(user_input[CONF_CARDS])
-            cards = {
-                uid: name for uid, name in self._cards.items() if uid not in remove
-            }
-            return self._save(**{CONF_CARDS: cards})
-        return self.async_show_form(
-            step_id="remove_card",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(CONF_CARDS): SelectSelector(
-                        SelectSelectorConfig(
-                            options=[
-                                SelectOptionDict(value=uid, label=f"{name} ({uid})")
-                                for uid, name in self._cards.items()
-                            ],
-                            multiple=True,
-                            mode=SelectSelectorMode.LIST,
-                        )
-                    )
-                }
-            ),
-        )
-
-    async def async_step_uid(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Turn the raw card UID in the punch attributes on or off."""
-        if user_input is not None:
-            return self._save(**{CONF_EXPOSE_UID: user_input[CONF_EXPOSE_UID]})
-        return self.async_show_form(
-            step_id="uid",
+            step_id="init",
             data_schema=vol.Schema(
                 {
                     vol.Required(
@@ -357,10 +249,3 @@ class AdarazOptionsFlow(OptionsFlow):
                 }
             ),
         )
-
-
-def _format_ts(ts: int) -> str:
-    """Local time of a punch for the list of recent cards."""
-    return dt_util.as_local(dt_util.utc_from_timestamp(ts)).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
