@@ -19,6 +19,12 @@ CONF_CAPS: Final = "caps"
 
 CAP_RELAY: Final = "relay"
 
+#: Options: names of cards as ``{uid_hex: name}``, set by an admin in the options.
+CONF_CARDS: Final = "cards"
+#: Options: also put the raw card UID in the punch attributes (off by default).
+CONF_EXPOSE_UID: Final = "expose_uid"
+
+ATTR_CARD: Final = "card"
 ATTR_UID: Final = "uid"
 ATTR_TS: Final = "ts"
 ATTR_LATE: Final = "late"
@@ -36,3 +42,9 @@ DEDUP_SIZE: Final = 2000
 RELAY_TIMEOUT: Final = 10.0
 #: Seconds the config flow waits for the first session after pairing (to learn caps).
 SESSION_WAIT: Final = 10.0
+
+#: A card without a name in the options is ``card_`` and 8 hex digits of a keyed
+#: hash of its UID (see ``AdarazLink.card_id``).
+CARD_ID_PREFIX: Final = "card_"
+#: Number of recent cards without a name (RAM only) the options flow offers.
+RECENT_UNNAMED_SIZE: Final = 10

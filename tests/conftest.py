@@ -32,12 +32,12 @@ from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.setup import async_setup_component
 
-from custom_components.adaraz.const import DOMAIN, WS_PATH
+from custom_components.adaraz.const import CONF_CARDS, DOMAIN, WS_PATH
 from custom_components.adaraz.link import DATA_LINK, AdarazLink
 
 DEVICE_ID = "C00F0202"
 INTERNAL_URL = "http://ha.local:8123"
-PUNCH_ATTRS = ("uid", "ts", "late")
+PUNCH_ATTRS = ("card", "uid", "ts", "late")
 
 
 @pytest.fixture(autouse=True)
@@ -80,10 +80,23 @@ def capture_punches(hass: HomeAssistant, entity_id: str) -> list[dict[str, Any]]
         if (new_key := key(new)) in seen:
             return
         seen.add(new_key)
-        punches.append({name: new.attributes[name] for name in PUNCH_ATTRS})
+        punches.append(
+            {
+                name: new.attributes[name]
+                for name in PUNCH_ATTRS
+                if name in new.attributes
+            }
+        )
 
     async_track_state_change_event(hass, [entity_id], listener)
     return punches
+
+
+def name_cards(hass: HomeAssistant, entry: ConfigEntry, *uids: str) -> None:
+    """Name cards after their UIDs, so tests can tell punches apart by ``card``."""
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, CONF_CARDS: {uid: uid for uid in uids}}
+    )
 
 
 class Harness:

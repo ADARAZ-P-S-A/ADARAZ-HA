@@ -58,8 +58,10 @@ rules:
   action-exceptions: done
   config-entry-unloading: done
   docs-configuration-parameters:
-    status: exempt
-    comment: No options flow.
+    status: todo
+    comment: >-
+      Written in README.md (card names, card UID option); done once the
+      integration's page on home-assistant.io exists.
   docs-installation-parameters:
     status: todo
     comment: >-

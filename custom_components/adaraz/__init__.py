@@ -17,7 +17,14 @@ from homeassistant.helpers import (
 )
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CAP_RELAY, CONF_MODEL, CONF_NAME, DOMAIN, MANUFACTURER
+from .const import (
+    CAP_RELAY,
+    CONF_EXPOSE_UID,
+    CONF_MODEL,
+    CONF_NAME,
+    DOMAIN,
+    MANUFACTURER,
+)
 from .link import AdarazDevice, async_get_link
 
 PLATFORMS: list[Platform] = [
@@ -72,9 +79,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: AdarazConfigEntry) -> bo
     entry.runtime_data = device
     link.devices[device.public_key] = device
     entry.async_on_unload(lambda: _async_forget(link.devices, device))
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     device.ready = True
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: AdarazConfigEntry) -> None:
+    """Reload when the UID option changed, so the restored state drops the UID.
+
+    Card names apply to the next punch without a reload: during a reload punches are
+    refused, and the device sends them again only after it reconnects.
+    """
+    if entry.runtime_data.expose_uid != bool(entry.options.get(CONF_EXPOSE_UID)):
+        hass.config_entries.async_schedule_reload(entry.entry_id)
 
 
 def _async_forget(devices: dict[bytes, AdarazDevice], device: AdarazDevice) -> None:

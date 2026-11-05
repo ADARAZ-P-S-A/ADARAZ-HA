@@ -68,7 +68,7 @@ marked as late.
 
 | Entity | Type | Description |
 |---|---|---|
-| Punch | event | Fires for every card punch. Attributes: `uid` (card UID, hex), `ts` (Unix time of the punch), `late`. |
+| Punch | event | Fires for every card punch. Attributes: `card` (the card's ID or name, see [Cards](#cards)), `ts` (Unix time of the punch), `late`. |
 | Connection | binary sensor (connectivity) | On while the reader is connected to Home Assistant. |
 | Card reader | binary sensor (problem) | On when the reader reports that its card reader does not work. |
 | Open | button | Pulses the relay according to the reader's relay settings, like an accepted card. |
@@ -86,11 +86,45 @@ records the punch, and the relay moves only on **Open** / **Relay** (and the
 panel's test buttons). Without Home Assistant or the network, nobody gets in
 by card in that mode.
 
+### Cards
+
+Punches do not show the card's UID: entity attributes are readable by every
+Home Assistant user and end up in the history, and many card readers accept a
+card with a copied UID, so a visible UID helps someone clone a door card.
+
+Instead, the `card` attribute of the **Punch** entity holds a card ID such as
+`card_3f9a2c71`. Every card has one from its first punch, with no setup. It
+does not change, it is the same on every reader paired with this Home
+Assistant, and it does not reveal the UID: it is a keyed hash (HMAC-SHA256)
+whose key is derived from the integration's private server key. (A plain hash
+of a 4 to 7 byte UID could be reversed by trying every UID.)
+
+An admin can give a card a name that replaces its ID:
+
+1. Punch the card on the reader.
+2. Open **Settings > Devices & services > ADARAZ > Configure > Name a card**.
+   Cards without a name that punched since Home Assistant started are listed
+   there with their ID (newest first). You can also type the UID shown in the
+   reader's admin panel.
+3. Enter a name, for example the name of the person. Several cards can have
+   the same name. Names in the form of a card ID are reserved.
+
+**Remove card names** in the same menu gives cards their ID back. A new name
+applies to the next punch and the reader stays connected; automations that
+use the card's previous ID or name must be updated.
+
+**Card UID in punches** (off by default) also puts the raw UID in a `uid`
+attribute. Turn it on only if every Home Assistant user may see card UIDs:
+anyone who can read the attribute can copy the card. The `uid` attribute is
+never written to the recorder history; the entity reloads when the option
+changes. Punch states recorded by version 0.1.3 or older contain the UID; to
+remove them, run the action `recorder.purge_entities` for the Punch entity.
+
 ### Automations with punches
 
 Use the **Punch** event entity. Its state is the time of the last punch, so
 every punch is a state change; the punch itself is in the attributes of the
-new state (`uid`, `ts`, `late`). Trigger on the entity's state and check the
+new state (`card`, `ts`, `late`). Trigger on the entity's state and check the
 attributes of `trigger.to_state`, not the entity's current state (a second
 punch may already have replaced it):
 
@@ -107,7 +141,7 @@ automation:
     conditions:
       - condition: template
         value_template: >-
-          {{ trigger.to_state.attributes.uid == '04A1B2C3'
+          {{ trigger.to_state.attributes.card == 'card_3f9a2c71'
              and not trigger.to_state.attributes.late }}
     actions:
       - action: button.press
@@ -115,6 +149,8 @@ automation:
           entity_id: button.wejscie_open
 ```
 
+Put in the card's ID (the Punch entity's `card` attribute after the card
+punched, or the list in **Configure > Name a card**), or the name you gave it.
 `not_to` skips the entity becoming unavailable (while the entry reloads), and
 `not_from` skips its last state being restored afterwards: neither is a punch.
 In the automation editor: trigger **Entity > State** on the Punch entity,
@@ -205,13 +241,25 @@ protokołem Noise, więc zwykłe `http://` w sieci lokalnej jest bezpieczne.
    i inne serwery** wpisz adres i kod.
 5. Czytnik się połączy, a Home Assistant sam doda urządzenie.
 
-**Encje:** zdarzenie *Odbicie* (atrybuty `uid`, `ts`, `late`), czujniki
+**Encje:** zdarzenie *Odbicie* (atrybuty `card`, `ts`, `late`), czujniki
 *Połączenie* i *Czytnik kart* (problem), a gdy w czytniku włączono zdalne
 sterowanie przekaźnikiem: przycisk *Otwórz* i przełącznik *Przekaźnik*.
 Automatyzacje reagują na zmianę stanu encji *Odbicie* i sprawdzają atrybuty
 `trigger.to_state` (przykład wyżej). Odbicia, które dotarły ponad 5 minut po
 fakcie (czytnik był offline), mają `late: true` i nie powinny uruchamiać działań
 w czasie rzeczywistym, np. otwierania drzwi.
+
+**Karty:** odbicie nie pokazuje UID karty (atrybuty widzi każdy użytkownik
+Home Assistant, trafiają do historii, a wiele czytników przyjmie kartę ze
+skopiowanym UID). Zamiast tego atrybut `card` ma identyfikator karty, np.
+`card_3f9a2c71`: każda karta dostaje go przy pierwszym odbiciu, jest stały,
+taki sam na wszystkich czytnikach i nie ujawnia UID (HMAC z kluczem
+wyprowadzonym z prywatnego klucza serwera). Administrator może zamienić go na
+nazwę w **Ustawienia > Urządzenia oraz usługi > ADARAZ > Konfiguruj > Nazwij
+kartę**: odbij kartę na czytniku, wybierz ją z listy ostatnio odbitych kart bez
+nazwy (albo wpisz UID z panelu czytnika) i wpisz nazwę, np. imię i nazwisko.
+Opcja *UID karty w odbiciach* (domyślnie wyłączona) dodaje surowy UID
+w atrybucie `uid`, który nigdy nie jest zapisywany w historii.
 
 **Tylko Home Assistant steruje przekaźnikiem:** w czytniku (firmware 108 lub
 nowszy) wybierz tryb przekaźnika z *zarządzaniem zdalnym*. Karta wtedy tylko
