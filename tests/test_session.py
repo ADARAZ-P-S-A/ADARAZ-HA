@@ -11,10 +11,7 @@ from unittest.mock import patch
 from adaraz import DeviceSession, RelayResult, RelayTimeout, State
 from adaraz.device import LinkDevice
 import pytest
-from pytest_homeassistant_custom_component.common import (
-    async_capture_events,
-    async_mock_service,
-)
+from pytest_homeassistant_custom_component.common import async_mock_service
 
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR_DOMAIN
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN, SERVICE_PRESS
@@ -39,11 +36,11 @@ from .conftest import (
     Harness,
     PairDevice,
     capture_punches,
-    card_ids,
     get_link,
+    name_cards,
     until,
 )
-from custom_components.adaraz.const import CONF_EXPOSE_UID, DOMAIN
+from custom_components.adaraz.const import CONF_CARDS, CONF_EXPOSE_UID, DOMAIN
 from custom_components.adaraz.link import AdarazLink
 from custom_components.adaraz.storage import AdarazStorage, key_fingerprint
 
@@ -128,53 +125,43 @@ async def test_punches(
     pair_device: PairDevice,
     hass_storage: dict,
 ) -> None:
-    """Punches fire the event entity and scan the card's tag; late ones only fire."""
+    """Punches fire the event entity with the card ID or name, late ones flagged."""
     old = int(time.time()) - 3600
     device.punch("04A1B2C3", ts=old)  # before pairing: not imported
     entry = await pair_device(device)
     events = capture_punches(hass, EVENT_ENTITY)
-    scans = async_capture_events(hass, "tag_scanned")
 
-    # The card ID is in the attributes; the UID is not exposed by default.
+    # A card without a name has its card ID; the UID is not exposed by default.
     card_id = entry.runtime_data.link.card_id("04FFEE11")
     assert re.fullmatch(r"card_[0-9a-f]{8}", card_id)
     now = int(time.time())
     device.punch("04FFEE11", ts=now)
     await device.wait_delivered()
     await hass.async_block_till_done()
-    assert events == [{"card": card_id, "card_name": None, "ts": now, "late": False}]
+    assert events == [{"card": card_id, "ts": now, "late": False}]
     state = hass.states.get(EVENT_ENTITY)
     assert state.attributes["event_type"] == "punch"
+    assert state.attributes["card"] == card_id
     assert "uid" not in state.attributes
     assert "04FFEE11" not in str(state.attributes)
+    assert state.attributes["ts"] == now
+    assert state.attributes["late"] is False
+    assert entry.runtime_data.recent_unnamed == {"04FFEE11": now}
 
-    # A live punch is a scan of the card's tag, by this reader.
-    registry_device = dr.async_get(hass).async_get_device(
-        identifiers={(DOMAIN, DEVICE_ID)}
+    # A punch from 10 minutes ago (the device was offline) is late.
+    hass.config_entries.async_update_entry(
+        entry, options={CONF_CARDS: {"04A1B2C3D4E5F6": "Anna"}}
     )
-    assert [e.data for e in scans] == [
-        {"tag_id": card_id, "name": None, "device_id": registry_device.id}
-    ]
-    entity_registry = er.async_get(hass)
-    tag_entity_id = entity_registry.async_get_entity_id("tag", "tag", card_id)
-    assert tag_entity_id is not None
-
-    # Named in Settings > Tags: punches have the name too, the ID stays.
-    entity_registry.async_update_entity(tag_entity_id, name="Anna")
-
-    # A punch from 10 minutes ago (the device was offline) is late: it fires the
-    # event entity, but it is not a tag scan.
-    device.punch("04FFEE11", ts=now - 600)
+    device.punch("04A1B2C3D4E5F6", ts=now - 600)
     await device.wait_delivered()
     await hass.async_block_till_done()
-    assert events[-1] == {
-        "card": card_id,
-        "card_name": "Anna",
-        "ts": now - 600,
-        "late": True,
-    }
+    assert events[-1] == {"card": "Anna", "ts": now - 600, "late": True}
+    state = hass.states.get(EVENT_ENTITY)
+    assert state.attributes["late"] is True
+    assert state.attributes["card"] == "Anna"
     assert len(events) == 2
-    assert len(scans) == 1
+    # A named card is not offered for naming.
+    assert entry.runtime_data.recent_unnamed == {"04FFEE11": now}
 
     # The cursor was stored before the ack.
     assert device_store(hass_storage, device)["cursor"] == {
@@ -192,7 +179,8 @@ async def test_cursor_across_reconnect(
     hass_storage: dict,
 ) -> None:
     """After a reconnect only new punches are delivered, without duplicates."""
-    await pair_device(device)
+    entry = await pair_device(device)
+    name_cards(hass, entry, *(f"0400000{i}" for i in range(1, 6)))
     events = capture_punches(hass, EVENT_ENTITY)
     now = int(time.time())
     device.punch("04000001", ts=now - 40)
@@ -209,9 +197,12 @@ async def test_cursor_across_reconnect(
     assert device.welcome.cursor.next == 2
     await device.wait_delivered()
     await hass.async_block_till_done()
-    assert [e["card"] for e in events] == card_ids(
-        hass, "04000001", "04000002", "04000003", "04000004"
-    )
+    assert [e["card"] for e in events] == [
+        "04000001",
+        "04000002",
+        "04000003",
+        "04000004",
+    ]
     assert not any(e["late"] for e in events)
 
     # A fresh storage instance (as after a restart) reads the same cursor.
@@ -229,7 +220,7 @@ async def test_cursor_across_reconnect(
     await harness.start_session(device)
     await device.wait_delivered()
     await hass.async_block_till_done()
-    assert [e["card"] for e in events][4:] == card_ids(hass, "04000005")
+    assert [e["card"] for e in events][4:] == ["04000005"]
     stored = device_store(hass_storage, device)
     assert stored["cursor"] == {"epoch": device.log.epoch, "next": device.log.count}
     # History up to the newest punch before the change is not reported again.
@@ -244,6 +235,7 @@ async def test_punches_refused_while_unloaded(
 ) -> None:
     """While the entry is unloaded the server does not ack, so no punch is lost."""
     entry = await pair_device(device)
+    name_cards(hass, entry, "04000001")
     events = capture_punches(hass, EVENT_ENTITY)
     assert await hass.config_entries.async_unload(entry.entry_id)
     device.punch("04000001")
@@ -256,7 +248,7 @@ async def test_punches_refused_while_unloaded(
     await harness.start_session(device)
     await device.wait_delivered()
     await hass.async_block_till_done()
-    assert [e["card"] for e in events] == card_ids(hass, "04000001")
+    assert [e["card"] for e in events] == ["04000001"]
 
 
 async def test_relay(
@@ -501,8 +493,8 @@ async def test_two_devices_routed_by_key(
     other = LinkDevice(
         device_id="C00F0203", name="Wyjscie", relay_allowed=True, open_ms=50
     )
-    await pair_device(device)
-    await pair_device(other)
+    name_cards(hass, await pair_device(device), "04000001", "04000002")
+    name_cards(hass, await pair_device(other), "04000001", "04000002")
     events = capture_punches(hass, EVENT_ENTITY)
     other_events = capture_punches(hass, "event.wyjscie_punch")
 
@@ -511,8 +503,8 @@ async def test_two_devices_routed_by_key(
     device.punch("04000001")
     await device.wait_delivered()
     await hass.async_block_till_done()
-    assert [e["card"] for e in events] == card_ids(hass, "04000001")
-    assert [e["card"] for e in other_events] == card_ids(hass, "04000002")
+    assert [e["card"] for e in events] == ["04000001"]
+    assert [e["card"] for e in other_events] == ["04000002"]
 
     await hass.services.async_call(
         SWITCH_DOMAIN,
@@ -539,7 +531,7 @@ async def test_two_devices_routed_by_key(
         blocking=True,
     )
     assert [c.cmd for c in other.relay_commands] == ["on", "open"]
-    assert [e["card"] for e in other_events] == card_ids(hass, "04000002")
+    assert [e["card"] for e in other_events] == ["04000002"]
 
 
 async def test_punches_refused_while_stopping(
@@ -549,7 +541,7 @@ async def test_punches_refused_while_stopping(
     pair_device: PairDevice,
 ) -> None:
     """While Home Assistant stops, batches are not acknowledged."""
-    await pair_device(device)
+    name_cards(hass, await pair_device(device), "04000001")
     events = capture_punches(hass, EVENT_ENTITY)
     hass.set_state(CoreState.stopping)
     device.punch("04000001")
@@ -561,51 +553,41 @@ async def test_punches_refused_while_stopping(
     await harness.start_session(device)
     await device.wait_delivered()
     await hass.async_block_till_done()
-    assert [e["card"] for e in events] == card_ids(hass, "04000001")
+    assert [e["card"] for e in events] == ["04000001"]
 
 
-async def test_readme_automations(
+async def test_readme_automation(
     hass: HomeAssistant,
     harness: Harness,
     device: LinkDevice,
     pair_device: PairDevice,
 ) -> None:
-    """The automations from the README run for live punches of the card only."""
+    """The automation from the README runs for live punches of the card only."""
     entry = await pair_device(device)
-    card_id = entry.runtime_data.link.card_id("04A1B2C3")
-    device_id = entry.runtime_data.registry_id
-    tag_calls = async_mock_service(hass, "test", "tag_open")
-    template_calls = async_mock_service(hass, "test", "template_open")
+    hass.config_entries.async_update_entry(
+        entry, options={CONF_CARDS: {"04A1B2C3": "Anna Kowalska"}}
+    )
+    calls = async_mock_service(hass, "test", "open")
     assert await async_setup_component(
         hass,
         "automation",
         {
-            "automation": [
-                {
-                    "triggers": {
-                        "trigger": "tag",
-                        "tag_id": card_id,
-                        "device_id": device_id,
-                    },
-                    "actions": {"action": "test.tag_open"},
+            "automation": {
+                "triggers": {
+                    "trigger": "state",
+                    "entity_id": EVENT_ENTITY,
+                    "not_from": "unavailable",
+                    "not_to": ["unavailable", "unknown"],
                 },
-                {
-                    "triggers": {
-                        "trigger": "state",
-                        "entity_id": EVENT_ENTITY,
-                        "not_from": "unavailable",
-                        "not_to": ["unavailable", "unknown"],
-                    },
-                    "conditions": {
-                        "condition": "template",
-                        "value_template": (
-                            f"{{{{ trigger.to_state.attributes.card == '{card_id}'"
-                            " and not trigger.to_state.attributes.late }}"
-                        ),
-                    },
-                    "actions": {"action": "test.template_open"},
+                "conditions": {
+                    "condition": "template",
+                    "value_template": (
+                        "{{ trigger.to_state.attributes.card == 'Anna Kowalska'"
+                        " and not trigger.to_state.attributes.late }}"
+                    ),
                 },
-            ]
+                "actions": {"action": "test.open"},
+            }
         },
     )
     now = int(time.time())
@@ -616,18 +598,18 @@ async def test_readme_automations(
         await hass.async_block_till_done()
 
     await punch("04A1B2C3", now)
-    assert (len(tag_calls), len(template_calls)) == (1, 1)
+    assert len(calls) == 1
     await punch("04FFFFFF", now + 1)
     await punch("04A1B2C3", now - 600)  # late
-    assert (len(tag_calls), len(template_calls)) == (1, 1)
+    assert len(calls) == 1
     await punch("04A1B2C3", now + 2)
-    assert (len(tag_calls), len(template_calls)) == (2, 2)
+    assert len(calls) == 2
 
     # Reloading the entry restores the last state; that is not a punch.
     assert await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
     assert hass.states.get(EVENT_ENTITY).attributes["ts"] == now + 2
-    assert (len(tag_calls), len(template_calls)) == (2, 2)
+    assert len(calls) == 2
 
 
 async def test_expose_uid(
@@ -649,15 +631,7 @@ async def test_expose_uid(
     await device.wait_delivered()
     await hass.async_block_till_done()
     card_id = entry.runtime_data.link.card_id("04FFEE11")
-    assert events == [
-        {
-            "card": card_id,
-            "card_name": None,
-            "uid": "04FFEE11",
-            "ts": now,
-            "late": False,
-        }
-    ]
+    assert events == [{"card": card_id, "uid": "04FFEE11", "ts": now, "late": False}]
     state = hass.states.get(EVENT_ENTITY)
     assert "uid" in state.state_info["unrecorded_attributes"]
 
@@ -669,6 +643,12 @@ async def test_expose_uid(
     assert state.attributes["ts"] == now
     assert state.attributes["card"] == card_id
     assert "uid" not in state.attributes
+
+    # Card names alone do not reload the entry.
+    runtime = entry.runtime_data
+    name_cards(hass, entry, "04FFEE11")
+    await hass.async_block_till_done()
+    assert entry.runtime_data is runtime
 
 
 async def test_card_ids(
