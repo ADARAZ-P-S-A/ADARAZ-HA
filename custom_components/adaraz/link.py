@@ -6,6 +6,8 @@ import asyncio
 from collections.abc import Callable
 import contextlib
 from dataclasses import replace
+import hashlib
+import hmac
 import logging
 from typing import TYPE_CHECKING
 
@@ -40,9 +42,13 @@ from homeassistant.util.hass_dict import HassKey
 
 from .const import (
     CAP_RELAY,
+    CARD_ID_PREFIX,
     CONF_CAPS,
+    CONF_CARDS,
+    CONF_EXPOSE_UID,
     CONF_PUBLIC_KEY,
     DOMAIN,
+    RECENT_UNNAMED_SIZE,
     RELAY_TIMEOUT,
     SERVER_SOFTWARE,
     WS_PATH,
@@ -121,7 +127,22 @@ class AdarazLink:
         #: identified by their key only, never by the id they report.
         self.devices: dict[bytes, AdarazDevice] = {}
         self._unsubs: list[Callable[[], None]] = []
+        #: Key of the card IDs, derived from the server's private key.
+        self._card_key = hmac.new(
+            storage.private_key, b"adaraz card id", hashlib.sha256
+        ).digest()
         storage.before_store = self._before_store
+
+    def card_id(self, uid: str) -> str:
+        """Return the ID of a card: ``card_`` and 8 hex digits of a keyed hash.
+
+        It is the same for a card on every reader of this Home Assistant instance
+        and does not change. A plain hash of a 4 to 7 byte UID could be reversed by
+        trying every UID; without the key (derived from the server's private key,
+        which never leaves the private store) it cannot.
+        """
+        digest = hmac.new(self._card_key, uid.upper().encode(), hashlib.sha256)
+        return f"{CARD_ID_PREFIX}{digest.hexdigest()[:8]}"
 
     @callback
     def async_start(self) -> None:
@@ -296,6 +317,11 @@ class AdarazDevice:
         self.connected = False
         self.hello: Hello | None = None
         self.state: State | None = None
+        #: Put the raw card UID in punch attributes (option; a change reloads).
+        self.expose_uid = bool(entry.options.get(CONF_EXPOSE_UID, False))
+        #: Cards without a name that punched recently, as ``{uid: ts}`` (newest
+        #: last). Only in RAM; the options flow offers them to be named.
+        self.recent_unnamed: dict[str, int] = {}
         self._listeners: list[Callable[[], None]] = []
         self._punch_listeners: list[Callable[[PunchRecord], None]] = []
         if (session := link.server.get_session_by_key(self.public_key)) is not None:
@@ -309,6 +335,16 @@ class AdarazDevice:
         return (
             self.connected and self.hello is not None and CAP_RELAY in self.hello.caps
         )
+
+    @property
+    def cards(self) -> dict[str, str]:
+        """Names of known cards from the options, as ``{uid: name}``."""
+        cards: dict[str, str] = self.entry.options.get(CONF_CARDS, {})
+        return cards
+
+    def card_name(self, uid: str) -> str:
+        """Return the name an admin gave the card, or else its card ID."""
+        return self.cards.get(uid.upper()) or self.link.card_id(uid)
 
     @callback
     def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
@@ -375,6 +411,11 @@ class AdarazDevice:
 
     @callback
     def _handle_punch(self, punch: PunchRecord) -> None:
+        if (uid := punch.uid.upper()) not in self.cards:
+            self.recent_unnamed.pop(uid, None)
+            self.recent_unnamed[uid] = punch.ts
+            while len(self.recent_unnamed) > RECENT_UNNAMED_SIZE:
+                del self.recent_unnamed[next(iter(self.recent_unnamed))]
         for listener in list(self._punch_listeners):
             listener(punch)
 
