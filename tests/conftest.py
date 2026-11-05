@@ -32,12 +32,12 @@ from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.setup import async_setup_component
 
-from custom_components.adaraz.const import CONF_CARDS, DOMAIN, WS_PATH
+from custom_components.adaraz.const import DOMAIN, WS_PATH
 from custom_components.adaraz.link import DATA_LINK, AdarazLink
 
 DEVICE_ID = "C00F0202"
 INTERNAL_URL = "http://ha.local:8123"
-PUNCH_ATTRS = ("card", "uid", "ts", "late")
+PUNCH_ATTRS = ("card", "card_name", "uid", "ts", "late")
 
 
 @pytest.fixture(autouse=True)
@@ -92,11 +92,10 @@ def capture_punches(hass: HomeAssistant, entity_id: str) -> list[dict[str, Any]]
     return punches
 
 
-def name_cards(hass: HomeAssistant, entry: ConfigEntry, *uids: str) -> None:
-    """Name cards after their UIDs, so tests can tell punches apart by ``card``."""
-    hass.config_entries.async_update_entry(
-        entry, options={**entry.options, CONF_CARDS: {uid: uid for uid in uids}}
-    )
+def card_ids(hass: HomeAssistant, *uids: str) -> list[str]:
+    """Return the card IDs of these UIDs (the ``card`` attribute of punches)."""
+    link = get_link(hass)
+    return [link.card_id(uid) for uid in uids]
 
 
 class Harness:
@@ -175,9 +174,18 @@ async def harness(
 
 
 async def start_flow(hass: HomeAssistant) -> dict[str, Any]:
-    """Start a user flow and return the progress result (with the pairing code)."""
+    """Start a user flow, choose RAZ-RCP-1 and return the progress result.
+
+    The progress result has the pairing code.
+    """
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": SOURCE_USER}
+    )
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "user"
+    assert result["menu_options"] == ["raz_rcp_1"]
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"next_step_id": "raz_rcp_1"}
     )
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["step_id"] == "pair"

@@ -1,6 +1,12 @@
 {
   "config": {
     "step": {
+      "user": {
+        "title": "Choose the device",
+        "menu_options": {
+          "raz_rcp_1": "RAZ-RCP-1 card reader / time clock"
+        }
+      },
       "pair": {
         "title": "Connect the reader"
       },
@@ -25,43 +31,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "Options",
-        "menu_options": {
-          "add_card": "Name a card",
-          "remove_card": "Remove card names",
-          "uid": "Card UID in punches"
-        }
-      },
-      "add_card": {
-        "title": "Name a card",
-        "description": "Every card has an ID such as `card_3f9a2c71` in the `card` attribute of the Punch entity. It stays the same, also on other readers, and does not reveal the card's UID. Here you can give a card a name instead. Cards without a name that punched since Home Assistant started are listed with their ID; you can also type the UID shown in the reader's admin panel. Automations that use the card's previous name or ID must be updated.",
-        "data": {
-          "uid": "Card UID",
-          "name": "Name"
-        },
-        "data_description": {
-          "uid": "Hex, for example 04A1B2C3. Spaces and colons are ignored.",
-          "name": "For example the name of the person. Several cards can have the same name."
-        }
-      },
-      "remove_card": {
-        "title": "Remove card names",
-        "description": "The selected cards get back their ID (`card_` and 8 hex digits).",
-        "data": {
-          "cards": "Cards"
-        }
-      },
-      "uid": {
         "title": "Card UID in punches",
-        "description": "When on, the Punch entity also has the raw card UID in its `uid` attribute. Every Home Assistant user can read entity attributes, and many readers accept a card with a cloned UID, so anyone who sees the UID can copy the card. Off by default; card IDs and names are enough for automations. The UID is never written to the history.",
+        "description": "Cards are named in Settings > Tags: every card that punches appears there with its card ID (such as `card_3f9a2c71`), and the Tag trigger runs automations for it.\n\nWhen this option is on, the Punch entity also has the raw card UID in its `uid` attribute. Every Home Assistant user can read entity attributes, and many readers accept a card with a cloned UID, so anyone who sees the UID can copy the card. Off by default; card IDs and tags are enough for automations. The UID is never written to the history.",
         "data": {
           "expose_uid": "Show the card UID"
         }
       }
-    },
-    "error": {
-      "invalid_uid": "Enter the UID as 4 to 7 bytes of hex, for example 04A1B2C3.",
-      "invalid_name": "Enter a name. Names in the form of a card ID (`card_` and 8 hex digits) are reserved."
     }
   },
   "entity": {
@@ -89,6 +64,9 @@
           },
           "card": {
             "name": "Card"
+          },
+          "card_name": {
+            "name": "Card name"
           },
           "uid": {
             "name": "Card UID"

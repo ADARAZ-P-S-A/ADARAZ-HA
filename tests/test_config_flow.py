@@ -348,5 +348,8 @@ async def test_no_url(hass: HomeAssistant) -> None:
         result = await hass.config_entries.flow.async_init(
             DOMAIN, context={"source": SOURCE_USER}
         )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"next_step_id": "raz_rcp_1"}
+        )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_url"

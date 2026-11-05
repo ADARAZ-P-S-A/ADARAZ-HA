@@ -32,11 +32,13 @@ from adaraz import (
 )
 from adaraz.aiohttp_ws import handle_request
 from adaraz.const import CLOSE_INTERNAL_ERROR
+from homeassistant.components.tag import async_scan_tag
+from homeassistant.components.tag.const import DOMAIN as TAG_DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_CORE_CONFIG_UPDATE, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.http import HomeAssistantView
 from homeassistant.util.hass_dict import HassKey
 
@@ -44,11 +46,9 @@ from .const import (
     CAP_RELAY,
     CARD_ID_PREFIX,
     CONF_CAPS,
-    CONF_CARDS,
     CONF_EXPOSE_UID,
     CONF_PUBLIC_KEY,
     DOMAIN,
-    RECENT_UNNAMED_SIZE,
     RELAY_TIMEOUT,
     SERVER_SOFTWARE,
     WS_PATH,
@@ -319,9 +319,6 @@ class AdarazDevice:
         self.state: State | None = None
         #: Put the raw card UID in punch attributes (option; a change reloads).
         self.expose_uid = bool(entry.options.get(CONF_EXPOSE_UID, False))
-        #: Cards without a name that punched recently, as ``{uid: ts}`` (newest
-        #: last). Only in RAM; the options flow offers them to be named.
-        self.recent_unnamed: dict[str, int] = {}
         self._listeners: list[Callable[[], None]] = []
         self._punch_listeners: list[Callable[[PunchRecord], None]] = []
         if (session := link.server.get_session_by_key(self.public_key)) is not None:
@@ -336,15 +333,13 @@ class AdarazDevice:
             self.connected and self.hello is not None and CAP_RELAY in self.hello.caps
         )
 
-    @property
-    def cards(self) -> dict[str, str]:
-        """Names of known cards from the options, as ``{uid: name}``."""
-        cards: dict[str, str] = self.entry.options.get(CONF_CARDS, {})
-        return cards
-
-    def card_name(self, uid: str) -> str:
-        """Return the name an admin gave the card, or else its card ID."""
-        return self.cards.get(uid.upper()) or self.link.card_id(uid)
+    def card_name(self, card_id: str) -> str | None:
+        """Return the name of the card's tag (Settings > Tags), if it has one."""
+        registry = er.async_get(self.hass)
+        entity_id = registry.async_get_entity_id(TAG_DOMAIN, TAG_DOMAIN, card_id)
+        if entity_id is None or (entry := registry.async_get(entity_id)) is None:
+            return None
+        return entry.name
 
     @callback
     def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
@@ -411,13 +406,19 @@ class AdarazDevice:
 
     @callback
     def _handle_punch(self, punch: PunchRecord) -> None:
-        if (uid := punch.uid.upper()) not in self.cards:
-            self.recent_unnamed.pop(uid, None)
-            self.recent_unnamed[uid] = punch.ts
-            while len(self.recent_unnamed) > RECENT_UNNAMED_SIZE:
-                del self.recent_unnamed[next(iter(self.recent_unnamed))]
         for listener in list(self._punch_listeners):
             listener(punch)
+        if not punch.late and self.registry_id:
+            # A live punch is also a tag scan: the card appears in Settings > Tags,
+            # where it can be named, and the Tag trigger fires. A late punch is not:
+            # an automation must not open a door for a punch from the past.
+            self.entry.async_create_task(
+                self.hass,
+                async_scan_tag(
+                    self.hass, self.link.card_id(punch.uid), self.registry_id
+                ),
+                "adaraz tag scan",
+            )
 
     async def async_relay(self, cmd: str) -> None:
         """Send a relay command; raise HomeAssistantError if it did not execute.

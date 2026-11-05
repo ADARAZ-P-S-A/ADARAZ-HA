@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "adaraz"
-version = "0.1.4"
+version = "0.1.5"
 description = "ADARAZ Link: secure, Noise based connection between ADARAZ devices (RAZ-RCP-1) and servers"
 readme = "README.md"
 license = "MIT"

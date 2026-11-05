@@ -1,6 +1,12 @@
 {
   "config": {
     "step": {
+      "user": {
+        "title": "Wybierz urządzenie",
+        "menu_options": {
+          "raz_rcp_1": "RAZ-RCP-1 (czytnik kart, rejestrator czasu pracy)"
+        }
+      },
       "pair": {
         "title": "Połączenie czytnika"
       },
@@ -25,43 +31,12 @@
   "options": {
     "step": {
       "init": {
-        "title": "Opcje",
-        "menu_options": {
-          "add_card": "Nazwij kartę",
-          "remove_card": "Usuń nazwy kart",
-          "uid": "UID karty w odbiciach"
-        }
-      },
-      "add_card": {
-        "title": "Nazwij kartę",
-        "description": "Każda karta ma identyfikator, np. `card_3f9a2c71`, w atrybucie `card` encji Odbicie. Jest stały, taki sam na innych czytnikach i nie ujawnia UID karty. Tutaj możesz nadać karcie nazwę zamiast niego. Na liście są karty bez nazwy odbite od startu Home Assistant, z ich identyfikatorem; możesz też wpisać UID widoczny w panelu administracyjnym czytnika. Automatyzacje używające poprzedniej nazwy lub identyfikatora karty trzeba poprawić.",
-        "data": {
-          "uid": "UID karty",
-          "name": "Nazwa"
-        },
-        "data_description": {
-          "uid": "Szesnastkowo, na przykład 04A1B2C3. Spacje i dwukropki są pomijane.",
-          "name": "Na przykład imię i nazwisko osoby. Kilka kart może mieć tę samą nazwę."
-        }
-      },
-      "remove_card": {
-        "title": "Usuń nazwy kart",
-        "description": "Wybrane karty wrócą do swojego identyfikatora (`card_` i 8 cyfr szesnastkowych).",
-        "data": {
-          "cards": "Karty"
-        }
-      },
-      "uid": {
         "title": "UID karty w odbiciach",
-        "description": "Po włączeniu encja Odbicie ma też surowy UID karty w atrybucie `uid`. Atrybuty encji może odczytać każdy użytkownik Home Assistant, a wiele czytników przyjmuje kartę ze sklonowanym UID, więc każdy, kto widzi UID, może skopiować kartę. Domyślnie wyłączone; do automatyzacji wystarczą identyfikatory i nazwy kart. UID nigdy nie jest zapisywany w historii.",
+        "description": "Karty nazywasz w Ustawienia > Tagi: każda odbita karta pojawia się tam z identyfikatorem (np. `card_3f9a2c71`), a wyzwalacz Tag uruchamia dla niej automatyzacje.\n\nPo włączeniu tej opcji encja Odbicie ma też surowy UID karty w atrybucie `uid`. Atrybuty encji może odczytać każdy użytkownik Home Assistant, a wiele czytników przyjmuje kartę ze sklonowanym UID, więc każdy, kto widzi UID, może skopiować kartę. Domyślnie wyłączone; do automatyzacji wystarczą identyfikatory kart i tagi. UID nigdy nie jest zapisywany w historii.",
         "data": {
           "expose_uid": "Pokazuj UID karty"
         }
       }
-    },
-    "error": {
-      "invalid_uid": "Wpisz UID jako 4 do 7 bajtów szesnastkowo, na przykład 04A1B2C3.",
-      "invalid_name": "Wpisz nazwę. Nazwy w postaci identyfikatora karty (`card_` i 8 cyfr szesnastkowych) są zarezerwowane."
     }
   },
   "entity": {
@@ -89,6 +64,9 @@
           },
           "card": {
             "name": "Karta"
+          },
+          "card_name": {
+            "name": "Nazwa karty"
           },
           "uid": {
             "name": "UID karty"
